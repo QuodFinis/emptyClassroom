@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Status</title>
+</head>
+
+<body>
+
+<h1>Upload Status</h1>
+<p>Status: {{ status.status }}</p>
+{% if status.status == 'Failed' %}
+    <p>Error: {{ status.error_message }}</p>
+{% endif %}
+{% if schedules %}
+    <h2>Current Schedule</h2>
+    <table>
+        <tr>
+            <th>Class</th>
+            <th>Room</th>
+            <th>Days</th>
+            <th>Time</th>
+        </tr>
+        {% for schedule in schedules %}
+        <tr>
+            <td>{{ schedule.course.course_name }}</td>
+            <td>{{ schedule.room.room_name }}</td>
+            <td>{{ schedule.days.all|join:", " }}</td>
+            <td>{{ schedule.start_time }} - {{ schedule.end_time }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endif %}
+
+</body>
+</html>

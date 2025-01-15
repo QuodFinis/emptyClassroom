@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {% load static %}
+    <title>Upload Schedule</title>
+    <script src="{% static 'app/get_sas_token.js' %}"></script>
+
+</head>
+<body>
+    <h1>Upload Schedule</h1>
+<form action="{% url 'app:upload_schedule' %}" method="post" enctype="multipart/form-data" id="upload-schedule">
+        {% csrf_token %}
+        <input type="file" name="file" id="file" accept=".xls, .xlsx" required />
+        <br><br><br>
+        <button type="submit" id="upload-button">Upload</button>
+    </form>
+</body>
+</html>
