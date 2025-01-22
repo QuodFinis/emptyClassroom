@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from os import getenv
 
 # Load environment variables from .env.dev file (for local development)
-env_path = Path('.') / '.env.dev'
+env_path = Path('.') / '.env'
 load_dotenv(dotenv_path=env_path)
 
 # Django settings

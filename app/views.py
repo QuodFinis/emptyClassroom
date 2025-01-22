@@ -1,7 +1,5 @@
 from django.urls import reverse
-
 from django.shortcuts import redirect, render
-
 from django.http import HttpResponse, JsonResponse
 
 from django.contrib.auth import authenticate, login
@@ -9,6 +7,8 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 
 from app.utils.upload_to_blob import upload_to_blob
+from app.utils.generate_sas_url import generate_sas_url
+
 from .models import UploadedFileStatus  # Model to track file processing
 
 import logging
@@ -35,29 +35,25 @@ def signup(request):
 		return render(request, 'signup.html', {'form': form})
 
 def login(request):
-    if request.method == "POST":
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect('home')
-        else:
-            return render(request, 'login.html', {'error': 'Invalid username or password'})
-    return render(request, 'login.html')
+	if request.method == "POST":
+		username = request.POST['username']
+		password = request.POST['password']
+		user = authenticate(request, username=username, password=password)
+		if user is not None:
+			login(request, user)
+			return redirect('home')
+		else:
+			return render(request, 'login.html', {'error': 'Invalid username or password'})
+	return render(request, 'login.html')
 
-@login_required
 def dashboard(request):
-    return render(request, 'app/dashboard.html')
+	return render(request, 'app/dashboard.html')
 
 
-@login_required
 def get_sas_url(request):
-	from app.utils.generate_sas_url import generate_sas_url
 	sas_url = generate_sas_url()
 	return JsonResponse({'sas_url': sas_url})
 
-@login_required
 def upload_schedule(request):
 	if request.method == 'POST' and request.FILES.get('file'):
 		logger.debug("Received file upload request.")
@@ -85,7 +81,6 @@ def upload_schedule(request):
 	logger.info("Rendering upload form.")
 	return render(request, 'app/upload_schedule.html')
 
-@login_required
 def upload_status(request, status_id):
 	status = UploadedFileStatus.objects.get(id=status_id)
 	return JsonResponse({

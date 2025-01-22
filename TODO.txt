@@ -1,4 +1,4 @@
-TODO: Make way that user can upload a file containing the scheduling information and this is populated into the database
+DONE: Make way that user can upload a file containing the scheduling information and this is populated into the database
     1. What file type is it (xlm, xlxs, json, txt, csv)
          excel file (for now)
     2. Create sample excel file

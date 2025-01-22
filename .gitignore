@@ -81,3 +81,4 @@ dmypy.json
 .pytype/
 cython_debug/
 TODO.txt
+/.env
