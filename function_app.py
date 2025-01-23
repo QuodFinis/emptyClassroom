@@ -6,7 +6,7 @@ app = func.FunctionApp()
 
 @app.function_name(name='BlobTrigger_ValidateSchedule')
 @app.blob_trigger(arg_name="myblob", path="devemptyclassroom/dev-uploaded-files",
-                               connection="devemptyclassroom_STORAGE") 
+                               connection="devUploadedFiles_STORAGE") 
 def validate_schedule_file(myblob: func.InputStream):
     logging.info(f"Python blob trigger function processed blob"
                 f"Name: {myblob.name}"
