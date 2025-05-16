@@ -11,12 +11,6 @@ to update database after changes run command
 from django.db import models
 from django.contrib.auth.models import User
 
-class EmailVerification(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    code = models.CharField(max_length=6)
-    is_verified = models.BooleanField(default=False)
-
-
 class ScheduleDump(models.Model):
     """
     This model is used to dump the schedule data from the CSV file.
