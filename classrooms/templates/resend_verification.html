@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="card bg-dark text-white p-4 shadow" style="max-width: 500px; width: 100%;">
+    <h3 class="mb-4 text-center">Resend Verification Email</h3>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="email" class="form-label">Email Address</label>
+        <input type="email" class="form-control" id="email" name="email" required>
+      </div>
+      <div class="d-grid mb-3">
+        <button type="submit" class="btn btn-light text-dark">Resend Verification</button>
+      </div>
+      <div class="text-center">
+        <small>Remembered your verification? <a href="{% url 'login' %}" class="text-decoration-none text-info">Try logging in</a></small>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

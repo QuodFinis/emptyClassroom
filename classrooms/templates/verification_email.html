@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h2>Welcome to Empty Classrooms!</h2>
+    <p>Please click the button below to verify your account:</p>
+
+    <a href="{{ protocol }}://{{ domain }}{% url 'verify_email' uidb64=uid token=token %}"
+       style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+        Verify Your Account
+    </a>
+
+    <p>If you didn't request this, please ignore this email.</p>
+    <p>This link will expire in 24 hours.</p>
+</body>
+</html>
