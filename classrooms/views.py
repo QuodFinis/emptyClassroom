@@ -1,22 +1,30 @@
 import sys
 from io import StringIO
 
+from django.contrib.sites.shortcuts import get_current_site
 from django.core.management import call_command
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
-from django.contrib.auth.models import User
-from django.views.decorators.http import require_http_methods
-import random
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import AuthenticationForm
+from django.template.loader import render_to_string
 
+from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+
+from emptyClassroom.settings import DEFAULT_FROM_EMAIL
 from .forms import CunySignupForm
-from .models import EmailVerification
 
 from classrooms.models import College, Building
 from classrooms.utils.empty_rooms import get_available_rooms
 
+
+
+User = get_user_model()
 @require_http_methods(["GET", "POST"])
 def index(request):
     selected_college = request.GET.get('college', None)
@@ -46,60 +54,132 @@ def index(request):
     })
 
 
+@require_http_methods(["GET", "POST"])
 def signup(request):
     if request.method == "POST":
+        print("POST data:", request.POST)  # Debug what's being submitted
         form = CunySignupForm(request.POST)
         if form.is_valid():
+            print("Form cleaned data:", form.cleaned_data)  # Debug cleaned data
             user = form.save(commit=False)
-            user.is_active = False  # Deactivate until verified
+            user.is_active = False
             user.save()
-            code = f"{random.randint(100000, 999999)}"
-            EmailVerification.objects.create(user=user, code=code)
-            send_mail(
-                "Your Verification Code",
-                f"Your code is: {code}",
-                "noreply@yourdomain.com",
-                [form.cleaned_data['email']],
-            )
-            messages.success(request, "Check your email for a verification code.")
-            return redirect('verify_email')
+            print("User created:", user.username, user.email)  # Debug created user
+
+            # Send verification email
+            send_verification_email(request, user)
+
+            res = messages.success(request, "Please check your email to verify your account.")
+            print(res)  # Debugging
+            return redirect('login')
     else:
         form = CunySignupForm()
     return render(request, 'signup.html', {'form': form})
 
 
-def verify_email(request):
+@require_http_methods(["GET", "POST"])
+def send_verification_email(request, user):
+    try:
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        current_site = get_current_site(request)
+        mail_subject = 'Activate your account'
+
+        context = {
+            'user': user,
+            'domain': current_site.domain,
+            'uid': uid,
+            'token': token,
+            'protocol': 'https' if request.is_secure() else 'http',
+        }
+
+        text_message = render_to_string('verification_email.txt', context)
+        html_message = render_to_string('verification_email.html', context)
+
+        email_sent = send_mail(
+            mail_subject,
+            text_message,
+            DEFAULT_FROM_EMAIL,
+            [user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+
+        if email_sent == 1:
+            print(f"Verification email sent to {user.email}")
+        else:
+            print(f"Failed to send email to {user.email}")
+
+    except Exception as e:
+        print(f"Error sending verification email: {str(e)}")
+
+
+def verify_email(request, uidb64, token):
+    User = get_user_model()
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        user.is_active = True
+        user.save()
+        messages.success(request, "Your email has been verified! You can now log in.")
+        return redirect('login')
+    else:
+        messages.error(request, "The verification link was invalid or has expired.")
+        return redirect('signup')
+
+
+@require_http_methods(["GET", "POST"])
+def resend_verification(request):
+    email = request.session.pop('resend_email', None)
+
     if request.method == "POST":
         email = request.POST.get('email')
-        code = request.POST.get('code')
+
+    if email:
         try:
             user = User.objects.get(email=email)
-            verification = EmailVerification.objects.get(user=user)
-            if verification.code == code:
-                user.is_active = True
-                user.save()
-                verification.is_verified = True
-                verification.save()
-                messages.success(request, "Email verified! You can now log in.")
-                return redirect('login')
+            if not user.is_active:
+                send_verification_email(request, user)  # Same token gets re-used
+                messages.info(request, f"A verification email has been sent to {email}.")
             else:
-                messages.error(request, "Invalid code.")
-        except (User.DoesNotExist, EmailVerification.DoesNotExist):
-            messages.error(request, "Invalid email or code.")
-    return render(request, 'verify_email.html')
+                messages.info(request, "Account is already active. Please log in.")
+                return redirect('login')
+        except User.DoesNotExist:
+            messages.error(request, "No account found with this email.")
+
+    return render(request, 'resend_verification.html', {'email': email})
 
 @require_http_methods(["GET", "POST"])
 def login(request):
+    if request.user.is_authenticated:
+        return redirect('index')
+
     form = AuthenticationForm(request, data=request.POST or None)
+
     if request.method == "POST":
         if form.is_valid():
             user = form.get_user()
             auth_login(request, user)
             return redirect('index')
         else:
-            messages.error(request, "Invalid username or password.")
-    return render(request, 'login.html', {'form': form})
+            # Check if the error is due to inactive user
+            username = form.cleaned_data.get('username')
+            if username:
+                try:
+                    user = User.objects.get(username=username)
+                    if not user.is_active:
+                        # User exists but isn't active due to email verification
+                        request.session['resend_email'] = user.email
+                        return redirect('resend_verification')
+                except User.DoesNotExist:
+                    pass
 
+    return render(request, 'login.html', {'form': form})
 
 @require_http_methods(["GET", "POST"])
 def import_data(request):

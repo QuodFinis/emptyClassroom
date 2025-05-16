@@ -1,0 +1,7 @@
+Welcome to Empty Classrooms!
+
+Please click the following link to verify your account:
+
+http://{{ domain }}{% url 'verify_email' uidb64=uid token=token %}
+
+If you didn't request this, please ignore this email.
