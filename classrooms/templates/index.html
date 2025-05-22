@@ -17,6 +17,17 @@
       color: #ffffff;
       font-family: 'Inter', sans-serif;
     }
+    .nav-links {
+      margin-bottom: 20px;
+    }
+    .nav-links a {
+      color: #4e8cff;
+      text-decoration: none;
+      margin-right: 15px;
+    }
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
     .filter-bar {
       background-color: #1e1e1e;
       padding: 20px;
@@ -162,6 +173,10 @@
         <div class="container p-4">
           <div class="row mb-4">
             <div class="col-12">
+              <div class="nav-links">
+                <a href="{% url 'index' %}" class="active">Available Rooms</a>
+                <a href="{% url 'all_rooms' %}">All Rooms</a>
+              </div>
               <h4>Available Rooms</h4>
               <p class="results-count">{{ available_rooms|length }} results found</p>
             </div>

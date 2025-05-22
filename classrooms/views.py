@@ -21,6 +21,7 @@ from emptyClassroom.settings import DEFAULT_FROM_EMAIL
 from .forms import CunySignupForm
 from classrooms.models import College, Building, Room
 from classrooms.utils.empty_rooms import get_available_rooms
+from classrooms.utils.all_rooms import get_all_rooms
 
 
 
@@ -269,3 +270,41 @@ def import_data(request):
         return redirect('import_data')
 
     return render(request, 'import_data.html')
+
+
+@require_http_methods(["GET", "POST"])
+def all_rooms(request):
+    selected_college = request.GET.get('college', None)
+    selected_buildings = request.GET.getlist('buildings', None)
+
+    # Fetch colleges for the filter
+    colleges = College.objects.all()
+
+    # Fetch buildings based on the selected college
+    if selected_college:
+        buildings = Building.objects.filter(college__name=selected_college)
+    else:
+        buildings = Building.objects.all()
+
+    # Fetch all rooms based on filters
+    all_rooms_list = get_all_rooms(
+        college=selected_college if selected_college else None,
+        buildings=selected_buildings if selected_buildings else None
+    )
+
+    return render(request, 'all_rooms.html', {
+        'colleges': colleges,
+        'buildings': buildings,
+        'all_rooms': all_rooms_list,
+        'selected_college': selected_college,
+        'selected_buildings': selected_buildings,
+    })
+
+@require_http_methods(["GET"])
+def colleges(request):
+    # Fetch all colleges
+    all_colleges = College.objects.all()
+
+    return render(request, 'colleges.html', {
+        'colleges': all_colleges,
+    })
