@@ -325,3 +325,31 @@ def college_buildings(request, college_name):
         'college': college,
         'buildings': buildings,
     })
+
+
+@require_http_methods(["GET"])
+def building_rooms(request, college_name, building_name):
+    # Get the college object
+    try:
+        college = College.objects.get(name=college_name)
+    except College.DoesNotExist:
+        messages.error(request, f"College '{college_name}' not found.")
+        return redirect('colleges')
+
+    # Get the building object
+    try:
+        building = Building.objects.filter(college=college, name=building_name).first()
+        if not building:
+            raise Building.DoesNotExist
+    except Building.DoesNotExist:
+        messages.error(request, f"Building '{building_name}' not found in {college_name}.")
+        return redirect('college_buildings', college_name=college_name)
+
+    # Fetch all rooms for this building
+    rooms = get_all_rooms(college=college_name, buildings=[building_name])
+
+    return render(request, 'building_rooms.html', {
+        'college': college,
+        'building': building,
+        'rooms': rooms,
+    })
