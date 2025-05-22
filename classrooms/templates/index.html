@@ -27,6 +27,7 @@
       background-color: #1e1e1e;
       border: none;
       transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border-radius: 8px;
     }
     .card:hover {
       transform: translateY(-5px);
@@ -39,11 +40,66 @@
     }
     .form-select {
       background-color: #2e2e2e;
-      border: none;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 10px 15px;
     }
     .btn-primary {
       background-color: #4e8cff;
       border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      width: 100%;
+      font-weight: 500;
+    }
+    .filter-section {
+      margin-bottom: 25px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 15px;
+    }
+    .filter-section:last-child {
+      border-bottom: none;
+    }
+    .filter-header {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-label {
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .sidebar-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #333;
+    }
+    .form-check-input {
+      background-color: #2e2e2e;
+      border: 1px solid #444;
+    }
+    .form-check-label {
+      margin-left: 8px;
+    }
+    .multi-select-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .form-check {
+      padding-left: 0;
+      display: flex;
+      align-items: center;
+    }
+    .results-count {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-bottom: 20px;
     }
   </style>
 </head>
@@ -52,54 +108,84 @@
   <div class="container-fluid">
     <div class="row">
       <!-- Filter Sidebar -->
-      <div class="col-md-3 filter-bar">
-        <h3>Filters</h3>
-        <form method="get">
-          <div class="mb-3">
-            <label for="college" class="form-label">College</label>
-            <select class="form-select" name="college" id="college" onchange="this.form.submit()">
-              <option value="">All</option>
-              {% for college in colleges %}
-                <option value="{{ college.name }}" {% if college.name == selected_college %}selected{% endif %}>
-                  {{ college.name }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
+        <div class="col-md-3 filter-bar">
+          <h3 class="sidebar-title">Filters</h3>
+          <form method="get" id="filterForm">
+            <!-- College Filter -->
+            <div class="filter-section">
+              <div class="filter-header">College</div>
+              <div class="mb-3">
+                <select class="form-select" name="college" onchange="this.form.submit()">
+                  <option value="">All Colleges</option>
+                  {% for college in colleges %}
+                    <option value="{{ college.name }}" {% if college.name == selected_college %}selected{% endif %}>
+                      {{ college.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
 
-          <div class="mb-3">
-            <label for="buildings" class="form-label">Buildings</label>
-            <select class="form-select" name="buildings" id="buildings" multiple>
-              {% for building in buildings %}
-                <option value="{{ building.name }}" {% if building.name in selected_buildings %}selected{% endif %}>
-                  {{ building.name }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
+            <!-- Buildings Filter (only shown if college is selected) -->
+            {% if selected_college %}
+              <div class="filter-section">
+                <div class="filter-header">Buildings in {{ selected_college }}</div>
+                <div class="mb-3">
+                  {% if buildings %}
+                    <div class="multi-select-container">
+                      {% for building in buildings %}
+                        <div class="form-check ms-3">
+                          <input class="form-check-input" type="checkbox" name="buildings"
+                                 value="{{ building.name }}" id="building-{{ forloop.counter }}"
+                                 {% if building.name in selected_buildings %}checked{% endif %}
+                                 onchange="this.form.submit()">
+                          <label class="form-check-label" for="building-{{ forloop.counter }}">
+                            {{ building.name }}
+                          </label>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <p class="text-muted">No buildings found for this college</p>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
 
-          <button type="submit" class="btn btn-primary">Apply Filters</button>
-        </form>
-      </div>
+            <!-- Hidden submit button for accessibility -->
+            <button type="submit" class="visually-hidden">Apply Filters</button>
+          </form>
+        </div>
 
       <!-- Room Cards Grid -->
       <div class="col-md-9">
-        <div class="row p-4">
-          {% for room in available_rooms %}
-            <div class="col-lg-4 col-md-6 mb-4">
-              <div class="card h-100 text-white">
-                <div class="card-body">
-                  <h5 class="card-title">{{ room.name }}</h5>
-                  <p class="card-text"><strong>Building:</strong> {{ room.building }}</p>
-                  <p class="card-text"><strong>Available until:</strong> {{ room.available_until }}</p>
+        <div class="container p-4">
+          <div class="row mb-4">
+            <div class="col-12">
+              <h4>Available Rooms</h4>
+              <p class="results-count">{{ available_rooms|length }} results found</p>
+            </div>
+          </div>
+
+          <div class="row">
+            {% for room in available_rooms %}
+              <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100 text-white">
+                  <div class="card-body">
+                    <h5 class="card-title">{{ room.name }}</h5>
+                    <p class="card-text"><strong>Building:</strong> {{ room.building }}</p>
+                    <p class="card-text"><strong>Available until:</strong> {{ room.available_until }}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          {% empty %}
-            <div class="col-12">
-              <p>No rooms available.</p>
-            </div>
-          {% endfor %}
+            {% empty %}
+              <div class="col-12">
+                <div class="alert alert-dark" role="alert">
+                  No rooms match your current filters. Try adjusting your criteria.
+                </div>
+              </div>
+            {% endfor %}
+          </div>
         </div>
       </div>
     </div>
