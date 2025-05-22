@@ -11,8 +11,8 @@ class CunySignupForm(UserCreationForm):
 
     def clean_email(self):
         email = self.cleaned_data['email'].lower()  # Normalize to lowercase
-        if not email.endswith('.cuny.edu'):
-            raise forms.ValidationError("You must use a CUNY email address ending with .cuny.edu")
+        # if not email.endswith('.cuny.edu'):
+        #     raise forms.ValidationError("You must use a CUNY email address ending with .cuny.edu")
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError("This email is already registered")
         return email
