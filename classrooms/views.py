@@ -5,21 +5,21 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.management import call_command
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth import login as auth_login
-from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login as auth_login, get_user_model
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.template.loader import render_to_string
-
+from django.urls import reverse_lazy
+from django.contrib.auth.views import PasswordChangeView
 from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.decorators import login_required
 
 from emptyClassroom.settings import DEFAULT_FROM_EMAIL
 from .forms import CunySignupForm
-
-from classrooms.models import College, Building
+from classrooms.models import College, Building, Room
 from classrooms.utils.empty_rooms import get_available_rooms
 
 
@@ -52,7 +52,6 @@ def index(request):
         'selected_college': selected_college,
         'selected_buildings': selected_buildings,
     })
-
 
 @require_http_methods(["GET", "POST"])
 def signup(request):
@@ -180,6 +179,72 @@ def login(request):
                     pass
 
     return render(request, 'login.html', {'form': form})
+
+
+def send_password_reset_email(request, user):
+    try:
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        current_site = get_current_site(request)
+        mail_subject = 'Reset your password'
+
+        context = {
+            'user': user,
+            'domain': current_site.domain,
+            'uid': uid,
+            'token': token,
+            'protocol': 'https' if request.is_secure() else 'http',
+        }
+
+        text_message = render_to_string('password_reset_email.txt', context)
+        html_message = render_to_string('password_reset_email.html', context)
+
+        email_sent = send_mail(
+            mail_subject,
+            text_message,
+            DEFAULT_FROM_EMAIL,
+            [user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+
+        if email_sent == 1:
+            print(f"Password reset email sent to {user.email}")
+        else:
+            print(f"Failed to send email to {user.email}")
+
+    except Exception as e:
+        print(f"Error sending password reset email: {str(e)}")
+
+def forgot_password(request):
+    if request.method == "POST":
+        email = request.POST.get('email')
+        try:
+            user = User.objects.get(email=email)
+            if user:
+                # Send password reset email
+                send_password_reset_email(request, user)
+                messages.success(request, "Password reset email sent.")
+                return redirect('login')
+        except User.DoesNotExist:
+            messages.error(request, "No account found with this email.")
+    return render(request, 'forgot_password.html')
+
+
+@login_required
+def profile(request):
+    user = request.user
+    context = {
+        'user': user,
+    }
+    return render(request, 'profile.html', context)
+
+class CustomPasswordChangeView(PasswordChangeView):
+    form_class = PasswordChangeForm
+    success_url = reverse_lazy('profile')
+    template_name = 'change_password.html'
+
 
 @require_http_methods(["GET", "POST"])
 def import_data(request):
