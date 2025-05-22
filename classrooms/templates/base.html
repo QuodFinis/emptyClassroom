@@ -101,13 +101,18 @@
           <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <!-- Left side navigation items -->
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'all_rooms' %}">All Rooms</a>
+            </li>
+          </ul>
+
+          <!-- Right side navigation items -->
           <ul class="navbar-nav align-items-center">
             <li class="nav-item">
               <a class="nav-link" href="#">About</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">Help</a>
             </li>
 
             {% if user.is_authenticated %}
@@ -118,8 +123,7 @@
                   <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random" class="user-avatar" alt="Profile">
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
-                  <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
-                  <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                  <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fas fa-user me-2"></i>Profile</a></li>
                   <li><hr class="dropdown-divider"></li>
                   <li>
                     <form method="post" action="{% url 'logout' %}">
