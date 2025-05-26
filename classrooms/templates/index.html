@@ -129,9 +129,11 @@
                 <select class="form-select" name="college" onchange="this.form.submit()">
                   <option value="">All Colleges</option>
                   {% for college in colleges %}
+                    {% if college.name %}
                     <option value="{{ college.name }}" {% if college.name == selected_college %}selected{% endif %}>
                       {{ college.name }}
                     </option>
+                    {% endif %}
                   {% endfor %}
                 </select>
               </div>
@@ -145,6 +147,7 @@
                   {% if buildings %}
                     <div class="multi-select-container">
                       {% for building in buildings %}
+                        {% if building.name %}
                         <div class="form-check ms-3">
                           <input class="form-check-input" type="checkbox" name="buildings"
                                  value="{{ building.name }}" id="building-{{ forloop.counter }}"
@@ -154,6 +157,7 @@
                             {{ building.name }}
                           </label>
                         </div>
+                        {% endif %}
                       {% endfor %}
                     </div>
                   {% else %}
@@ -184,15 +188,19 @@
 
           <div class="row">
             {% for room in available_rooms %}
+              {% if room.name and room.college and room.building %}
               <div class="col-lg-4 col-md-6 mb-4">
-                <div class="card h-100 text-white">
-                  <div class="card-body">
-                    <h5 class="card-title">{{ room.name }}</h5>
-                    <p class="card-text"><strong>Building:</strong> {{ room.building }}</p>
-                    <p class="card-text"><strong>Available until:</strong> {{ room.available_until }}</p>
+                <a href="{% url 'room_details' college_name=room.college building_name=room.building room_name=room.name %}" class="text-white text-decoration-none">
+                  <div class="card h-100 text-white">
+                    <div class="card-body">
+                      <h5 class="card-title">{{ room.name }}</h5>
+                      <p class="card-text"><strong>Building:</strong> {{ room.building }}</p>
+                      <p class="card-text"><strong>Available until:</strong> {{ room.available_until }}</p>
+                    </div>
                   </div>
-                </div>
+                </a>
               </div>
+              {% endif %}
             {% empty %}
               <div class="col-12">
                 <div class="alert alert-dark" role="alert">

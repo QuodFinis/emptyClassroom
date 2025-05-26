@@ -9,6 +9,7 @@ urlpatterns = [
     path('colleges/', views.colleges, name='colleges'),
     path('colleges/<str:college_name>/buildings/', views.college_buildings, name='college_buildings'),
     path('colleges/<str:college_name>/buildings/<str:building_name>/', views.building_rooms, name='building_rooms'),
+    path('colleges/<str:college_name>/buildings/<str:building_name>/rooms/<path:room_name>/', views.room_details, name='room_details'),
     path('signup/', views.signup, name='signup'),
     path('verify-email/<uidb64>/<token>/', views.verify_email, name='verify_email'),
     path('resend-verification/', views.resend_verification, name='resend_verification'),
