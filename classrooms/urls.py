@@ -17,6 +17,8 @@ urlpatterns = [
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='forgot_password.html'), name='password_reset'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('profile/', views.profile, name='profile'),
+    path('bookings/', views.bookings, name='bookings'),
+    path('bookings/cancel/<int:booking_id>/', views.cancel_booking, name='cancel_booking'),
     path('password-change/', auth_views.PasswordResetView.as_view(template_name='change_password.html'), name='password_change'),
     path('import-data/', views.import_data, name='import_data'),
 ]

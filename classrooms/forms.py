@@ -1,4 +1,6 @@
 from django import forms
+
+
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
@@ -23,3 +25,16 @@ class CunySignupForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+from .models import RoomBooking
+
+class RoomBookingForm(forms.ModelForm):
+    class Meta:
+        model = RoomBooking
+        fields = ['booking_date', 'start_time', 'end_time']
+        widgets = {
+            'booking_date': forms.DateInput(attrs={'type': 'date'}),
+            'start_time': forms.TimeInput(attrs={'type': 'time'}),
+            'end_time': forms.TimeInput(attrs={'type': 'time'}),
+        }

@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'classrooms',
+    'widget_tweaks',
 ]
 
 MIDDLEWARE = [
