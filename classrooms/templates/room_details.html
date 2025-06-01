@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load widget_tweaks %}
+{% load form_tags %}
 
 {% block content %}
 <!DOCTYPE html>
@@ -139,25 +140,34 @@
               </div>
 
               {% if user.is_authenticated %}
-                <div class="card booking-form">
-                  <h4>Book This Room</h4>
-                  <form method="post">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                      <label for="{{ form.booking_date.id_for_label }}" class="form-label">Date</label>
-                      {{ form.booking_date|add_class:"form-control" }}
+                {% if is_during_school_hours %}
+                  <div class="card booking-form">
+                    <h4>Book This Room</h4>
+                    <form method="post">
+                      {% csrf_token %}
+                      <div class="mb-3">
+                        <label for="{{ form.booking_date.id_for_label }}" class="form-label">Date</label>
+                        {{ form.booking_date|add_class:"form-control" }}
+                      </div>
+                      <div class="mb-3">
+                        <label for="{{ form.start_time.id_for_label }}" class="form-label">Start Time</label>
+                        {{ form.start_time|add_class:"form-control" }}
+                      </div>
+                      <div class="mb-3">
+                        <label for="{{ form.end_time.id_for_label }}" class="form-label">End Time</label>
+                        {{ form.end_time|add_class:"form-control" }}
+                      </div>
+                      <button type="submit" class="btn btn-primary">Book Room</button>
+                    </form>
+                  </div>
+                {% else %}
+                  <div class="card">
+                    <div class="alert alert-info" role="alert">
+                      {{ message }}
                     </div>
-                    <div class="mb-3">
-                      <label for="{{ form.start_time.id_for_label }}" class="form-label">Start Time</label>
-                      {{ form.start_time|add_class:"form-control" }}
-                    </div>
-                    <div class="mb-3">
-                      <label for="{{ form.end_time.id_for_label }}" class="form-label">End Time</label>
-                      {{ form.end_time|add_class:"form-control" }}
-                    </div>
-                    <button type="submit" class="btn btn-primary">Book Room</button>
-                  </form>
-                </div>
+                    <p>Room booking is only available during school hours (weekdays 8 AM to 8 PM).</p>
+                  </div>
+                {% endif %}
               {% else %}
                 <div class="card">
                   <p>Please <a href="{% url 'login' %}">log in</a> to book this room.</p>
@@ -167,31 +177,33 @@
 
             <div class="col-md-4">
               {% if user.is_authenticated %}
-              <div class="card booking-list">
-                <h4>Today's Bookings</h4>
-                {% if current_bookings %}
-                  {% for booking in current_bookings %}
-                    <div class="booking-item">
-                      <p><strong>{{ booking.start_time }} - {{ booking.end_time }}</strong></p>
-                      <p>Booked by: {{ booking.user.username }}</p>
-                    </div>
-                  {% endfor %}
-                {% else %}
-                  <p>No bookings for today.</p>
+                {% if is_during_school_hours or current_bookings %}
+                  <div class="card booking-list">
+                    <h4>Today's Bookings</h4>
+                    {% if current_bookings %}
+                      {% for booking in current_bookings %}
+                        <div class="booking-item">
+                          <p><strong>{{ booking.start_time|format_time }} - {{ booking.end_time|format_time }}</strong></p>
+                          <p>Booked by: {{ booking.user.username }}</p>
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      <p>No bookings for today.</p>
+                    {% endif %}
+                  </div>
                 {% endif %}
-              </div>
 
-              {% if user_bookings %}
-                <div class="card booking-list">
-                  <h4>Your Bookings</h4>
-                  {% for booking in user_bookings %}
-                    <div class="booking-item">
-                      <p><strong>{{ booking.booking_date }}</strong></p>
-                      <p>{{ booking.start_time }} - {{ booking.end_time }}</p>
-                    </div>
-                  {% endfor %}
-                </div>
-              {% endif %}
+                {% if user_bookings %}
+                  <div class="card booking-list">
+                    <h4>Your Bookings</h4>
+                    {% for booking in user_bookings %}
+                      <div class="booking-item">
+                        <p><strong>{{ booking.booking_date }}</strong></p>
+                        <p>{{ booking.start_time|format_time }} - {{ booking.end_time|format_time }}</p>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
               {% endif %}
             </div>
           </div>

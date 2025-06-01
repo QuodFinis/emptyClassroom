@@ -20,7 +20,7 @@ from django.contrib.auth.decorators import login_required
 
 from emptyClassroom.settings import DEFAULT_FROM_EMAIL
 from .forms import CunySignupForm
-from classrooms.models import College, Building, Room
+from classrooms.models import College, Building, Room, RoomAvailability
 from classrooms.utils.empty_rooms import get_available_rooms, is_school_hours
 from classrooms.utils.all_rooms import get_all_rooms
 
@@ -424,11 +424,33 @@ def room_details(request, college_name, building_name, room_name):
                     next_available_time = booking.end_time
                     break
 
-    # Handle booking form only if user is authenticated
+    # Check if it's during school hours
+    is_during_school_hours, message = is_school_hours()
+
+    # Handle booking form only if user is authenticated and it's during school hours
     form = None
-    if request.user.is_authenticated:
+    if request.user.is_authenticated and is_during_school_hours:
+        # Calculate next class start time
+        next_class_time = None
+        weekday = now.weekday()
+        current_minute_block = (now.hour - 8) * 60 + now.minute
+
+        # Find the next time when the room is not available (next class)
+        next_occupied = RoomAvailability.objects.filter(
+            room=room,
+            weekday=weekday,
+            minute_block__gt=current_minute_block,
+            is_available=False
+        ).order_by('minute_block').first()
+
+        if next_occupied:
+            # Convert minute_block to time
+            next_hour = 8 + next_occupied.minute_block // 60
+            next_minute = next_occupied.minute_block % 60
+            next_class_time = timezone.datetime.strptime(f"{next_hour}:{next_minute}", "%H:%M").time()
+
         if request.method == 'POST':
-            form = RoomBookingForm(request.POST)
+            form = RoomBookingForm(request.POST, next_class_time=next_class_time)
             if form.is_valid():
                 # Check if room is already booked for this time
                 booking_date = form.cleaned_data['booking_date']
@@ -458,12 +480,34 @@ def room_details(request, college_name, building_name, room_name):
                                     room_name=room_name)
         else:
             # Pre-fill form with current date and time
+            # Remove seconds from start time
+            start_time = now.time().replace(second=0, microsecond=0)
+
+            # Calculate end time (1 hour later or next class time, whichever is sooner)
+            one_hour_later = (now + timezone.timedelta(hours=1)).time().replace(second=0, microsecond=0)
+            default_end_time = timezone.datetime.strptime("20:00", "%H:%M").time()
+
+            # Ensure end time is after start time
+            if one_hour_later.hour < start_time.hour:  # Handle day boundary case
+                end_time = default_end_time
+            else:
+                end_time = one_hour_later
+
+            if next_class_time:
+                # Ensure next_class_time is after start_time
+                if (next_class_time.hour > start_time.hour or 
+                    (next_class_time.hour == start_time.hour and next_class_time.minute > start_time.minute)):
+                    end_time = min(end_time, next_class_time)
+                else:
+                    # If next_class_time is before start_time, use one_hour_later
+                    end_time = one_hour_later
+
             initial_data = {
                 'booking_date': today,
-                'start_time': now.time().replace(minute=0, second=0, microsecond=0),
-                'end_time': (now + timezone.timedelta(hours=1)).time().replace(minute=0, second=0, microsecond=0)
+                'start_time': start_time,
+                'end_time': end_time
             }
-            form = RoomBookingForm(initial=initial_data)
+            form = RoomBookingForm(initial=initial_data, next_class_time=next_class_time)
 
     return render(request, 'room_details.html', {
         'college': college,
@@ -475,6 +519,8 @@ def room_details(request, college_name, building_name, room_name):
         'next_available_time': next_available_time,
         'user_bookings': RoomBooking.objects.filter(room=room, user=request.user, booking_date__gte=today).order_by(
             'booking_date', 'start_time') if request.user.is_authenticated else None,
+        'is_during_school_hours': is_during_school_hours,
+        'message': message,
     })
 
 

@@ -1,6 +1,7 @@
 
 {% extends "base.html" %}
 {% load widget_tweaks %}
+{% load form_tags %}
 
 {% block title %}My Bookings{% endblock %}
 
@@ -22,7 +23,7 @@
                 <h6 class="card-subtitle mb-2 text-muted">{{ active_booking.college.name }} - {{ active_booking.building.name }}</h6>
                 <p class="card-text">
                   <strong>Date:</strong> {{ active_booking.booking_date }}<br>
-                  <strong>Time:</strong> {{ active_booking.start_time }} - {{ active_booking.end_time }}
+                  <strong>Time:</strong> {{ active_booking.start_time|format_time }} - {{ active_booking.end_time|format_time }}
                 </p>
                 <a href="{% url 'cancel_booking' booking_id=active_booking.id %}" class="btn btn-danger mt-2" onclick="return confirm('Are you sure you want to cancel this booking?')">Cancel Booking</a>
               </div>
@@ -42,7 +43,7 @@
                   <h6 class="card-subtitle mb-2 text-muted">{{ booking.college.name }} - {{ booking.building.name }}</h6>
                   <p class="card-text">
                     <strong>Date:</strong> {{ booking.booking_date }}<br>
-                    <strong>Time:</strong> {{ booking.start_time }} - {{ booking.end_time }}
+                    <strong>Time:</strong> {{ booking.start_time|format_time }} - {{ booking.end_time|format_time }}
                   </p>
                   <a href="{% url 'cancel_booking' booking_id=booking.id %}" class="btn btn-danger mt-2" onclick="return confirm('Are you sure you want to cancel this booking?')">Cancel Booking</a>
                 </div>
@@ -64,7 +65,7 @@
                   <h6 class="card-subtitle mb-2 text-muted">{{ booking.college.name }} - {{ booking.building.name }}</h6>
                   <p class="card-text">
                     <strong>Date:</strong> {{ booking.booking_date }}<br>
-                    <strong>Time:</strong> {{ booking.start_time }} - {{ booking.end_time }}
+                    <strong>Time:</strong> {{ booking.start_time|format_time }} - {{ booking.end_time|format_time }}
                   </p>
                 </div>
               </div>
