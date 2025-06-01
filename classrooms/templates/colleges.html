@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>All Colleges</title>
+
+  <!-- Bootstrap 5 CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Optional: Custom styles -->
+  <style>
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+    }
+    .card {
+      background-color: #1e1e1e;
+      border: none;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border-radius: 8px;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 12px rgba(0, 0, 0, 0.3);
+    }
+    .btn-primary {
+      background-color: #4e8cff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      width: 100%;
+      font-weight: 500;
+    }
+    .results-count {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-bottom: 20px;
+    }
+    .nav-links {
+      margin-bottom: 20px;
+    }
+    .nav-links a {
+      color: #4e8cff;
+      text-decoration: none;
+      margin-right: 15px;
+    }
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <!-- College Cards Grid -->
+      <div class="col-12">
+        <div class="container p-4">
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="nav-links">
+                <a href="{% url 'index' %}">Available Rooms</a>
+                <a href="{% url 'all_rooms' %}">All Rooms</a>
+                <a href="{% url 'colleges' %}" class="active">All Colleges</a>
+              </div>
+              <h4>All Colleges</h4>
+              <p class="results-count">{{ colleges|length }} colleges found</p>
+            </div>
+          </div>
+
+          <div class="row">
+            {% for college in colleges %}
+              <div class="col-lg-4 col-md-6 mb-4">
+                <a href="{% url 'college_buildings' college_name=college.name %}" class="text-decoration-none">
+                  <div class="card h-100 text-white">
+                    <div class="card-body">
+                      <h5 class="card-title">{{ college.name }}</h5>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            {% empty %}
+              <div class="col-12">
+                <div class="alert alert-dark" role="alert">
+                  No colleges found in the database.
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+{% endblock %}
