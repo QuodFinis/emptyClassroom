@@ -10,6 +10,7 @@ from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.contrib.auth.views import PasswordChangeView
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -20,9 +21,15 @@ from django.contrib.auth.decorators import login_required
 from emptyClassroom.settings import DEFAULT_FROM_EMAIL
 from .forms import CunySignupForm
 from classrooms.models import College, Building, Room
-from classrooms.utils.empty_rooms import get_available_rooms
+from classrooms.utils.empty_rooms import get_available_rooms, is_school_hours
 from classrooms.utils.all_rooms import get_all_rooms
 
+from django.db.models import Q
+from classrooms.models import RoomBooking
+from classrooms.forms import RoomBookingForm
+
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import Http404
 
 
 User = get_user_model()
@@ -40,16 +47,23 @@ def index(request):
     else:
         buildings = Building.objects.all()
 
-    # Fetch available rooms based on filters
-    available_rooms = get_available_rooms(
-        college=selected_college if selected_college else None,
-        buildings=selected_buildings if selected_buildings else None
-    )
+    # Check if it's during school hours
+    is_during_school_hours, message = is_school_hours()
+
+    # Fetch available rooms only if it's during school hours
+    if is_during_school_hours:
+        available_rooms = get_available_rooms(
+            college=selected_college if selected_college else None,
+            buildings=selected_buildings if selected_buildings else None
+        )
+    else:
+        available_rooms = []  # Empty list so count shows 0
 
     return render(request, 'index.html', {
         'colleges': colleges,
         'buildings': buildings,
         'available_rooms': available_rooms,
+        'message': message,  # Pass the message to the template
         'selected_college': selected_college,
         'selected_buildings': selected_buildings,
     })
@@ -354,7 +368,7 @@ def building_rooms(request, college_name, building_name):
         'rooms': rooms,
     })
 
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 def room_details(request, college_name, building_name, room_name):
     # Get the college object
     try:
@@ -381,8 +395,216 @@ def room_details(request, college_name, building_name, room_name):
         messages.error(request, f"Room '{room_name}' not found in {building_name}, {college_name}.")
         return redirect('building_rooms', college_name=college_name, building_name=building_name)
 
+    # Initialize variables
+    now = timezone.localtime(timezone.now())
+    today = now.date()
+    current_bookings = None
+    is_available = None
+    next_available_time = None
+
+    # Get booking-related data only if user is authenticated
+    if request.user.is_authenticated:
+        # Get current bookings for this room
+        current_bookings = RoomBooking.objects.filter(
+            room=room,
+            booking_date=today
+        ).order_by('start_time')
+
+        # Check if room is currently available
+        is_available = True
+        for booking in current_bookings:
+            if booking.start_time <= now.time() <= booking.end_time:
+                is_available = False
+                break
+
+        # Get next available time
+        if not is_available and current_bookings:
+            for booking in current_bookings:
+                if booking.end_time > now.time():
+                    next_available_time = booking.end_time
+                    break
+
+    # Handle booking form only if user is authenticated
+    form = None
+    if request.user.is_authenticated:
+        if request.method == 'POST':
+            form = RoomBookingForm(request.POST)
+            if form.is_valid():
+                # Check if room is already booked for this time
+                booking_date = form.cleaned_data['booking_date']
+                start_time = form.cleaned_data['start_time']
+                end_time = form.cleaned_data['end_time']
+
+                existing_bookings = RoomBooking.objects.filter(
+                    room=room,
+                    booking_date=booking_date,
+                ).filter(
+                    (Q(start_time__lte=start_time) & Q(end_time__gte=start_time)) |
+                    (Q(start_time__lte=end_time) & Q(end_time__gte=end_time)) |
+                    (Q(start_time__gte=start_time) & Q(end_time__lte=end_time))
+                )
+
+                if existing_bookings.exists():
+                    messages.error(request, "This room is already booked for the selected time.")
+                else:
+                    booking = form.save(commit=False)
+                    booking.user = request.user
+                    booking.room = room
+                    booking.college = college
+                    booking.building = building
+                    booking.save()
+                    messages.success(request, f"Room {room.name} booked successfully!")
+                    return redirect('room_details', college_name=college_name, building_name=building_name,
+                                    room_name=room_name)
+        else:
+            # Pre-fill form with current date and time
+            initial_data = {
+                'booking_date': today,
+                'start_time': now.time().replace(minute=0, second=0, microsecond=0),
+                'end_time': (now + timezone.timedelta(hours=1)).time().replace(minute=0, second=0, microsecond=0)
+            }
+            form = RoomBookingForm(initial=initial_data)
+
     return render(request, 'room_details.html', {
         'college': college,
         'building': building,
         'room': room,
+        'form': form,
+        'current_bookings': current_bookings,
+        'is_available': is_available,
+        'next_available_time': next_available_time,
+        'user_bookings': RoomBooking.objects.filter(room=room, user=request.user, booking_date__gte=today).order_by(
+            'booking_date', 'start_time') if request.user.is_authenticated else None,
     })
+
+
+@login_required
+def bookings(request):
+    user = request.user
+    now = timezone.localtime(timezone.now())
+    today = now.date()
+
+    # Get filter parameters
+    college_filter = request.GET.get('college', None)
+    building_filter = request.GET.get('building', None)
+    room_filter = request.GET.get('room', None)
+    date_from = request.GET.get('date_from', None)
+    date_to = request.GET.get('date_to', None)
+
+    # Base query for all user bookings (only active bookings)
+    bookings_query = RoomBooking.objects.filter(user=user, active=True)
+
+    # Apply filters if provided
+    if college_filter:
+        bookings_query = bookings_query.filter(college__name=college_filter)
+    if building_filter:
+        bookings_query = bookings_query.filter(building__name=building_filter)
+    if room_filter:
+        bookings_query = bookings_query.filter(room__name=room_filter)
+    if date_from:
+        try:
+            date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d').date()
+            bookings_query = bookings_query.filter(booking_date__gte=date_from)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d').date()
+            bookings_query = bookings_query.filter(booking_date__lte=date_to)
+        except ValueError:
+            pass
+
+    # Get active bookings (current date and time falls within booking time)
+    active_booking = bookings_query.filter(
+        booking_date=today,
+        start_time__lte=now.time(),
+        end_time__gte=now.time()
+    ).first()  # Limit to 1 active booking
+
+    # Get future bookings (bookings that haven't started yet)
+    future_query = bookings_query.filter(
+        Q(booking_date__gt=today) | 
+        Q(booking_date=today, start_time__gt=now.time())
+    ).order_by('booking_date', 'start_time')
+
+    # Get historical bookings (past bookings or completed today)
+    historical_query = bookings_query.exclude(id=active_booking.id if active_booking else 0).filter(
+        Q(booking_date__lt=today) | 
+        Q(booking_date=today, end_time__lt=now.time())
+    ).order_by('-booking_date', '-end_time')
+
+    # Pagination for historical bookings
+    page = request.GET.get('page', 1)
+    paginator = Paginator(historical_query, 5)  # Show 5 historical bookings per page
+
+    try:
+        historical_bookings = paginator.page(page)
+    except PageNotAnInteger:
+        historical_bookings = paginator.page(1)
+    except EmptyPage:
+        historical_bookings = paginator.page(paginator.num_pages)
+
+    # Get all colleges, buildings, and rooms for filters
+    colleges = College.objects.all()
+    buildings = Building.objects.all()
+    rooms = Room.objects.all()
+
+    # If a college is selected, filter buildings
+    if college_filter:
+        buildings = buildings.filter(college__name=college_filter)
+
+    # If a building is selected, filter rooms
+    if building_filter:
+        rooms = rooms.filter(building__name=building_filter)
+
+    return render(request, 'bookings.html', {
+        'active_booking': active_booking,
+        'future_bookings': future_query,
+        'historical_bookings': historical_bookings,
+        'colleges': colleges,
+        'buildings': buildings,
+        'rooms': rooms,
+        'college_filter': college_filter,
+        'building_filter': building_filter,
+        'room_filter': room_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'has_more': historical_bookings.has_next() if historical_bookings else False,
+        'current_page': int(page),
+    })
+
+
+@login_required
+def cancel_booking(request, booking_id):
+    """
+    View to handle cancellation of a booking.
+    Only allows cancellation of future bookings or currently active bookings.
+    """
+    try:
+        # Get the booking and ensure it belongs to the current user
+        booking = RoomBooking.objects.get(id=booking_id, user=request.user)
+
+        # Check if the booking is already inactive
+        if not booking.active:
+            messages.error(request, "This booking has already been cancelled.")
+            return redirect('bookings')
+
+        # Get current time
+        now = timezone.localtime(timezone.now())
+        today = now.date()
+
+        # Check if the booking is in the past (can't cancel past bookings)
+        if booking.booking_date < today or (booking.booking_date == today and booking.end_time < now.time()):
+            messages.error(request, "Cannot cancel a booking that has already ended.")
+            return redirect('bookings')
+
+        # Mark the booking as inactive (cancelled)
+        booking.active = False
+        booking.save()
+
+        messages.success(request, f"Booking for {booking.room.name} on {booking.booking_date} has been cancelled.")
+
+    except RoomBooking.DoesNotExist:
+        messages.error(request, "Booking not found or you don't have permission to cancel it.")
+
+    return redirect('bookings')
