@@ -186,28 +186,39 @@
             </div>
           </div>
 
-          <div class="row">
-            {% for room in available_rooms %}
-              {% if room.name and room.college and room.building %}
-              <div class="col-lg-4 col-md-6 mb-4">
-                <a href="{% url 'room_details' college_name=room.college building_name=room.building room_name=room.name %}" class="text-white text-decoration-none">
-                  <div class="card h-100 text-white">
-                    <div class="card-body">
-                      <h5 class="card-title">{{ room.name }}</h5>
-                      <p class="card-text"><strong>Building:</strong> {{ room.building }}</p>
-                      <p class="card-text"><strong>Available until:</strong> {{ room.available_until }}</p>
-                    </div>
-                  </div>
-                </a>
-              </div>
-              {% endif %}
-            {% empty %}
+          {% if message %}
+            <div class="row">
               <div class="col-12">
-                <div class="alert alert-dark" role="alert">
-                  No rooms match your current filters. Try adjusting your criteria.
+                <div class="alert alert-info" role="alert">
+                  {{ message }}
                 </div>
               </div>
-            {% endfor %}
+            </div>
+          {% else %}
+            <div class="row">
+              {% for room in available_rooms %}
+                {% if room.name and room.college and room.building %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                  <a href="{% url 'room_details' college_name=room.college building_name=room.building room_name=room.name %}" class="text-white text-decoration-none">
+                    <div class="card h-100 text-white">
+                      <div class="card-body">
+                        <h5 class="card-title">{{ room.name }}</h5>
+                        <p class="card-text"><strong>Building:</strong> {{ room.building }}</p>
+                        <p class="card-text"><strong>Available until:</strong> {{ room.available_until }}</p>
+                      </div>
+                    </div>
+                  </a>
+                </div>
+                {% endif %}
+              {% empty %}
+                <div class="col-12">
+                  <div class="alert alert-dark" role="alert">
+                    No rooms match your current filters. Try adjusting your criteria.
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
           </div>
         </div>
       </div>
