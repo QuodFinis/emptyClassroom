@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'classrooms',
+    'widget_tweaks',
 ]
 
 MIDDLEWARE = [
@@ -108,13 +109,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LOGIN_REDIRECT_URL = 'index'
 LOGOUT_REDIRECT_URL = 'index'
+LOGIN_URL = '/login/'
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/New_York'
 
 USE_I18N = True
 
@@ -142,14 +144,14 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('GMAIL_USER')
+EMAIL_HOST_USER = os.environ.get('GMAIL_EMAIL')
 EMAIL_HOST_PASSWORD = os.environ.get('GMAIL_PASSWORD')
-DEFAULT_FROM_EMAIL = os.environ.get('GMAIL_USER')
+DEFAULT_FROM_EMAIL = os.environ.get('GMAIL_EMAIL')
 
 
 # Django Email Verification
 DJANGO_EMAIL_VERIFICATION = {
-    'EMAIL_FROM_ADDRESS': os.environ.get('GMAIL_USER'),
+    'EMAIL_FROM_ADDRESS': os.environ.get('GMAIL_EMAIL'),
     'EMAIL_MAIL_SUBJECT': 'Confirm your email',
     'EMAIL_MAIL_HTML': 'verification_email.html',
     'EMAIL_MAIL_PLAIN': 'verification_email.txt',

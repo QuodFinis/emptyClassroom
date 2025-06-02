@@ -5,7 +5,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Room Availability</title>
+  <title>All Rooms</title>
 
   <!-- Bootstrap 5 CSS CDN -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -16,17 +16,6 @@
       background-color: #121212;
       color: #ffffff;
       font-family: 'Inter', sans-serif;
-    }
-    .nav-links {
-      margin-bottom: 20px;
-    }
-    .nav-links a {
-      color: #4e8cff;
-      text-decoration: none;
-      margin-right: 15px;
-    }
-    .nav-links a:hover {
-      text-decoration: underline;
     }
     .filter-bar {
       background-color: #1e1e1e;
@@ -112,6 +101,17 @@
       color: #aaa;
       margin-bottom: 20px;
     }
+    .nav-links {
+      margin-bottom: 20px;
+    }
+    .nav-links a {
+      color: #4e8cff;
+      text-decoration: none;
+      margin-right: 15px;
+    }
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 
@@ -129,11 +129,9 @@
                 <select class="form-select" name="college" onchange="this.form.submit()">
                   <option value="">All Colleges</option>
                   {% for college in colleges %}
-                    {% if college.name %}
                     <option value="{{ college.name }}" {% if college.name == selected_college %}selected{% endif %}>
                       {{ college.name }}
                     </option>
-                    {% endif %}
                   {% endfor %}
                 </select>
               </div>
@@ -147,7 +145,6 @@
                   {% if buildings %}
                     <div class="multi-select-container">
                       {% for building in buildings %}
-                        {% if building.name %}
                         <div class="form-check ms-3">
                           <input class="form-check-input" type="checkbox" name="buildings"
                                  value="{{ building.name }}" id="building-{{ forloop.counter }}"
@@ -157,7 +154,6 @@
                             {{ building.name }}
                           </label>
                         </div>
-                        {% endif %}
                       {% endfor %}
                     </div>
                   {% else %}
@@ -178,47 +174,34 @@
           <div class="row mb-4">
             <div class="col-12">
               <div class="nav-links">
-                <a href="{% url 'index' %}" class="active">Available Rooms</a>
-                <a href="{% url 'all_rooms' %}">All Rooms</a>
+                <a href="{% url 'index' %}">Available Rooms</a>
+                <a href="{% url 'all_rooms' %}" class="active">All Rooms</a>
               </div>
-              <h4>Available Rooms</h4>
-              <p class="results-count">{{ available_rooms|length }} results found</p>
+              <h4>All Rooms</h4>
+              <p class="results-count">{{ all_rooms|length }} results found</p>
             </div>
           </div>
 
-          {% if message %}
-            <div class="row">
+          <div class="row">
+            {% for room in all_rooms %}
+              <div class="col-lg-4 col-md-6 mb-4">
+                <a href="{% url 'room_details' college_name=room.college building_name=room.building room_name=room.name %}" class="text-white text-decoration-none">
+                  <div class="card h-100 text-white">
+                    <div class="card-body">
+                      <h5 class="card-title">{{ room.name }}</h5>
+                      <p class="card-text"><strong>College:</strong> {{ room.college }}</p>
+                      <p class="card-text"><strong>Building:</strong> {{ room.building }}</p>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            {% empty %}
               <div class="col-12">
-                <div class="alert alert-info" role="alert">
-                  {{ message }}
+                <div class="alert alert-dark" role="alert">
+                  No rooms match your current filters. Try adjusting your criteria.
                 </div>
               </div>
-            </div>
-          {% else %}
-            <div class="row">
-              {% for room in available_rooms %}
-                {% if room.name and room.college and room.building %}
-                <div class="col-lg-4 col-md-6 mb-4">
-                  <a href="{% url 'room_details' college_name=room.college building_name=room.building room_name=room.name %}" class="text-white text-decoration-none">
-                    <div class="card h-100 text-white">
-                      <div class="card-body">
-                        <h5 class="card-title">{{ room.name }}</h5>
-                        <p class="card-text"><strong>Building:</strong> {{ room.building }}</p>
-                        <p class="card-text"><strong>Available until:</strong> {{ room.available_until }}</p>
-                      </div>
-                    </div>
-                  </a>
-                </div>
-                {% endif %}
-              {% empty %}
-                <div class="col-12">
-                  <div class="alert alert-dark" role="alert">
-                    No rooms match your current filters. Try adjusting your criteria.
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-          {% endif %}
+            {% endfor %}
           </div>
         </div>
       </div>

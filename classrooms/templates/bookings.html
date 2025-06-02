@@ -1,0 +1,174 @@
+
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% load form_tags %}
+
+{% block title %}My Bookings{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <!-- Main content area -->
+    <div class="col-md-9">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h2 class="card-title">My Bookings</h2>
+
+          <!-- Active booking section -->
+          <h4 class="mt-4">Active Booking</h4>
+          {% if active_booking %}
+            <div class="card bg-dark mb-3">
+              <div class="card-body">
+                <h5 class="card-title">{{ active_booking.room.name }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ active_booking.college.name }} - {{ active_booking.building.name }}</h6>
+                <p class="card-text">
+                  <strong>Date:</strong> {{ active_booking.booking_date }}<br>
+                  <strong>Time:</strong> {{ active_booking.start_time|format_time }} - {{ active_booking.end_time|format_time }}
+                </p>
+                <a href="{% url 'cancel_booking' booking_id=active_booking.id %}" class="btn btn-danger mt-2" onclick="return confirm('Are you sure you want to cancel this booking?')">Cancel Booking</a>
+              </div>
+            </div>
+          {% else %}
+            <p>No active bookings.</p>
+          {% endif %}
+
+          <!-- Future bookings section -->
+          <h4 class="mt-4">Upcoming Bookings</h4>
+          <hr>
+          {% if future_bookings %}
+            {% for booking in future_bookings %}
+              <div class="card bg-dark mb-3">
+                <div class="card-body">
+                  <h5 class="card-title">{{ booking.room.name }}</h5>
+                  <h6 class="card-subtitle mb-2 text-muted">{{ booking.college.name }} - {{ booking.building.name }}</h6>
+                  <p class="card-text">
+                    <strong>Date:</strong> {{ booking.booking_date }}<br>
+                    <strong>Time:</strong> {{ booking.start_time|format_time }} - {{ booking.end_time|format_time }}
+                  </p>
+                  <a href="{% url 'cancel_booking' booking_id=booking.id %}" class="btn btn-danger mt-2" onclick="return confirm('Are you sure you want to cancel this booking?')">Cancel Booking</a>
+                </div>
+              </div>
+              {% if not forloop.last %}<hr>{% endif %}
+            {% endfor %}
+          {% else %}
+            <p>No upcoming bookings.</p>
+          {% endif %}
+
+          <!-- Historical bookings section -->
+          <h4 class="mt-4">Previous Bookings</h4>
+          <hr>
+          {% if historical_bookings %}
+            {% for booking in historical_bookings %}
+              <div class="card bg-dark mb-3">
+                <div class="card-body">
+                  <h5 class="card-title">{{ booking.room.name }}</h5>
+                  <h6 class="card-subtitle mb-2 text-muted">{{ booking.college.name }} - {{ booking.building.name }}</h6>
+                  <p class="card-text">
+                    <strong>Date:</strong> {{ booking.booking_date }}<br>
+                    <strong>Time:</strong> {{ booking.start_time|format_time }} - {{ booking.end_time|format_time }}
+                  </p>
+                </div>
+              </div>
+              {% if not forloop.last %}<hr>{% endif %}
+            {% endfor %}
+
+            <!-- Pagination controls -->
+            <div class="d-flex justify-content-center mt-4">
+              {% if historical_bookings.has_previous %}
+                <a href="?page={{ historical_bookings.previous_page_number }}{% if college_filter %}&college={{ college_filter }}{% endif %}{% if building_filter %}&building={{ building_filter }}{% endif %}{% if room_filter %}&room={{ room_filter }}{% endif %}{% if date_from %}&date_from={{ date_from|date:'Y-m-d' }}{% endif %}{% if date_to %}&date_to={{ date_to|date:'Y-m-d' }}{% endif %}" class="btn btn-outline-light me-2">Previous</a>
+              {% endif %}
+
+              {% if historical_bookings.has_next %}
+                <a href="?page={{ historical_bookings.next_page_number }}{% if college_filter %}&college={{ college_filter }}{% endif %}{% if building_filter %}&building={{ building_filter }}{% endif %}{% if room_filter %}&room={{ room_filter }}{% endif %}{% if date_from %}&date_from={{ date_from|date:'Y-m-d' }}{% endif %}{% if date_to %}&date_to={{ date_to|date:'Y-m-d' }}{% endif %}" class="btn btn-primary">Show More</a>
+              {% else %}
+                <p class="text-muted">End of bookings</p>
+              {% endif %}
+            </div>
+          {% else %}
+            <p>No previous bookings found.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter sidebar -->
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-body">
+          <h4 class="card-title">Filter Bookings</h4>
+
+          <!-- College filter form - auto-submits when changed -->
+          <form method="get" action="{% url 'bookings' %}" id="college-form">
+            <div class="mb-3">
+              <label for="college" class="form-label">College</label>
+              <select name="college" id="college" class="form-select bg-dark text-light" onchange="this.form.submit()">
+                <option value="">All Colleges</option>
+                {% for college in colleges %}
+                  <option value="{{ college.name }}" {% if college_filter == college.name %}selected{% endif %}>{{ college.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Preserve other filter values -->
+            {% if date_from %}<input type="hidden" name="date_from" value="{{ date_from|date:'Y-m-d' }}">{% endif %}
+            {% if date_to %}<input type="hidden" name="date_to" value="{{ date_to|date:'Y-m-d' }}">{% endif %}
+            {% if page %}<input type="hidden" name="page" value="{{ current_page }}">{% endif %}
+          </form>
+
+          <!-- Building filter form - auto-submits when changed -->
+          <form method="get" action="{% url 'bookings' %}" id="building-form">
+            <div class="mb-3">
+              <label for="building" class="form-label">Building</label>
+              <select name="building" id="building" class="form-select bg-dark text-light" onchange="this.form.submit()">
+                <option value="">All Buildings</option>
+                {% for building in buildings %}
+                  <option value="{{ building.name }}" {% if building_filter == building.name %}selected{% endif %}>{{ building.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Preserve other filter values -->
+            {% if college_filter %}<input type="hidden" name="college" value="{{ college_filter }}">{% endif %}
+            {% if date_from %}<input type="hidden" name="date_from" value="{{ date_from|date:'Y-m-d' }}">{% endif %}
+            {% if date_to %}<input type="hidden" name="date_to" value="{{ date_to|date:'Y-m-d' }}">{% endif %}
+            {% if page %}<input type="hidden" name="page" value="{{ current_page }}">{% endif %}
+          </form>
+
+          <!-- Room and date filter form -->
+          <form method="get" action="{% url 'bookings' %}">
+            <div class="mb-3">
+              <label for="room" class="form-label">Room</label>
+              <select name="room" id="room" class="form-select bg-dark text-light">
+                <option value="">All Rooms</option>
+                {% for room in rooms %}
+                  <option value="{{ room.name }}" {% if room_filter == room.name %}selected{% endif %}>{{ room.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="date_from" class="form-label">From Date</label>
+              <input type="date" name="date_from" id="date_from" class="form-control bg-dark text-light" value="{{ date_from|date:'Y-m-d' }}">
+            </div>
+
+            <div class="mb-3">
+              <label for="date_to" class="form-label">To Date</label>
+              <input type="date" name="date_to" id="date_to" class="form-control bg-dark text-light" value="{{ date_to|date:'Y-m-d' }}">
+            </div>
+
+            <!-- Preserve other filter values -->
+            {% if college_filter %}<input type="hidden" name="college" value="{{ college_filter }}">{% endif %}
+            {% if building_filter %}<input type="hidden" name="building" value="{{ building_filter }}">{% endif %}
+            {% if page %}<input type="hidden" name="page" value="{{ current_page }}">{% endif %}
+
+            <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+          </form>
+
+          <!-- Clear filters button -->
+          <a href="{% url 'bookings' %}" class="btn btn-outline-light w-100 mt-2">Clear Filters</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

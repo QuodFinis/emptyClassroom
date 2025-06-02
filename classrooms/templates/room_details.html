@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% load form_tags %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ room.name }} Details</title>
+
+  <!-- Bootstrap 5 CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Optional: Custom styles -->
+  <style>
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+    }
+    .card {
+      background-color: #1e1e1e;
+      border: none;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .nav-links {
+      margin-bottom: 20px;
+    }
+    .nav-links a {
+      color: #4e8cff;
+      text-decoration: none;
+      margin-right: 15px;
+    }
+    .nav-links a:hover {
+      text-decoration: underline;
+    }
+    .breadcrumb {
+      background-color: transparent;
+      padding: 0;
+      margin-bottom: 20px;
+    }
+    .breadcrumb-item a {
+      color: #4e8cff;
+      text-decoration: none;
+    }
+    .breadcrumb-item.active {
+      color: #aaa;
+    }
+    .room-detail {
+      margin-bottom: 15px;
+    }
+    .detail-label {
+      font-weight: bold;
+      color: #aaa;
+    }
+    .booking-form {
+      margin-top: 20px;
+    }
+    .booking-list {
+      margin-top: 20px;
+    }
+    .booking-item {
+      padding: 10px;
+      border-bottom: 1px solid #333;
+    }
+    .booking-item:last-child {
+      border-bottom: none;
+    }
+    .availability-badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .available {
+      background-color: #198754;
+    }
+    .unavailable {
+      background-color: #dc3545;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-12">
+        <div class="container p-4">
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="nav-links">
+                <a href="{% url 'index' %}">Available Rooms</a>
+                <a href="{% url 'all_rooms' %}">All Rooms</a>
+                <a href="{% url 'colleges' %}">All Colleges</a>
+              </div>
+
+              <!-- Breadcrumb navigation -->
+              <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                  <li class="breadcrumb-item"><a href="{% url 'colleges' %}">Colleges</a></li>
+                  <li class="breadcrumb-item"><a href="{% url 'college_buildings' college_name=college.name %}">{{ college.name }}</a></li>
+                  <li class="breadcrumb-item"><a href="{% url 'building_rooms' college_name=college.name building_name=building.name %}">{{ building.name }}</a></li>
+                  <li class="breadcrumb-item active" aria-current="page">{{ room.name }}</li>
+                </ol>
+              </nav>
+
+              <h4>Room Details</h4>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-8">
+              <div class="card">
+                <h3>{{ room.name }}</h3>
+                <div class="room-detail">
+                  <span class="detail-label">College:</span> {{ college.name }}
+                </div>
+                <div class="room-detail">
+                  <span class="detail-label">Building:</span> {{ building.name }}
+                </div>
+                <div class="room-detail">
+                  <span class="detail-label">Room:</span> {{ room.name }}
+                </div>
+                {% if user.is_authenticated %}
+                <div class="room-detail">
+                  <span class="detail-label">Status:</span>
+                  {% if is_available %}
+                    <span class="availability-badge available">Available Now</span>
+                  {% else %}
+                    <span class="availability-badge unavailable">Currently Booked</span>
+                    {% if next_available_time %}
+                      <span>(Available after {{ next_available_time }})</span>
+                    {% endif %}
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+
+              {% if user.is_authenticated %}
+                {% if is_during_school_hours %}
+                  <div class="card booking-form">
+                    <h4>Book This Room</h4>
+                    <form method="post">
+                      {% csrf_token %}
+                      <div class="mb-3">
+                        <label for="{{ form.booking_date.id_for_label }}" class="form-label">Date</label>
+                        {{ form.booking_date|add_class:"form-control" }}
+                      </div>
+                      <div class="mb-3">
+                        <label for="{{ form.start_time.id_for_label }}" class="form-label">Start Time</label>
+                        {{ form.start_time|add_class:"form-control" }}
+                      </div>
+                      <div class="mb-3">
+                        <label for="{{ form.end_time.id_for_label }}" class="form-label">End Time</label>
+                        {{ form.end_time|add_class:"form-control" }}
+                      </div>
+                      <button type="submit" class="btn btn-primary">Book Room</button>
+                    </form>
+                  </div>
+                {% else %}
+                  <div class="card">
+                    <div class="alert alert-info" role="alert">
+                      {{ message }}
+                    </div>
+                    <p>Room booking is only available during school hours (weekdays 8 AM to 8 PM).</p>
+                  </div>
+                {% endif %}
+              {% else %}
+                <div class="card">
+                  <p>Please <a href="{% url 'login' %}">log in</a> to book this room.</p>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-4">
+              {% if user.is_authenticated %}
+                {% if is_during_school_hours or current_bookings %}
+                  <div class="card booking-list">
+                    <h4>Today's Bookings</h4>
+                    {% if current_bookings %}
+                      {% for booking in current_bookings %}
+                        <div class="booking-item">
+                          <p><strong>{{ booking.start_time|format_time }} - {{ booking.end_time|format_time }}</strong></p>
+                          <p>Booked by: {{ booking.user.username }}</p>
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      <p>No bookings for today.</p>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                {% if user_bookings %}
+                  <div class="card booking-list">
+                    <h4>Your Bookings</h4>
+                    {% for booking in user_bookings %}
+                      <div class="booking-item">
+                        <p><strong>{{ booking.booking_date }}</strong></p>
+                        <p>{{ booking.start_time|format_time }} - {{ booking.end_time|format_time }}</p>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+{% endblock %}
