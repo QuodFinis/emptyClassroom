@@ -165,6 +165,8 @@ def resend_verification(request):
                 return redirect('login')
         except User.DoesNotExist:
             messages.error(request, "No account found with this email.")
+            # Still pass the email back to the template even if it doesn't exist
+            # This allows the user to correct typos without retyping the whole email
 
     return render(request, 'resend_verification.html', {'email': email})
 
@@ -182,13 +184,20 @@ def login(request):
             return redirect('index')
         else:
             # Check if the error is due to inactive user
+            # First try to get username from cleaned_data
             username = form.cleaned_data.get('username')
+
+            # If username is not in cleaned_data, try to get it from the POST data
+            if not username and request.POST:
+                username = request.POST.get('username')
+
             if username:
                 try:
                     user = User.objects.get(username=username)
                     if not user.is_active:
                         # User exists but isn't active due to email verification
                         request.session['resend_email'] = user.email
+                        request.session.save()  # Ensure the session is saved immediately
                         return redirect('resend_verification')
                 except User.DoesNotExist:
                     pass
